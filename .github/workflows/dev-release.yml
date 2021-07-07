@@ -41,10 +41,10 @@ jobs:
           # endtest
           # tags: "registry.scality.com/test-result-management-dev/test-result-management:${{ github.event.inputs.tag }}"
 
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.event.inputs.tag }}
-          release_name: Release ${{ github.event.inputs.tag }}
+      #- name: Create Release
+      #  uses: softprops/action-gh-release@v1
+      #  env:
+      #    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #  with:
+      #    tag_name: ${{ github.event.inputs.tag }}
+      #    release_name: Release ${{ github.event.inputs.tag }}
