@@ -1,5 +1,5 @@
 ---
-name: dev-release
+name: release
 
 on:
   workflow_dispatch:
@@ -31,7 +31,7 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           push: true
-          tags: "registry.scality.com/test-result-management-dev/test-result-management:${{ github.event.inputs.tag }}"
+          tags: "registry.scality.com/test-result-management/test-result-management:${{ github.event.inputs.tag }}"
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
