@@ -2,9 +2,6 @@
 name: dev-release
 
 on:
-  # test
-  push:
-  # endtest
   workflow_dispatch:
     inputs:
       tag:
@@ -33,18 +30,13 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v2
         with:
-          # context: .
-          # file: ./Dockerfile
           push: true
-          # test
-          tags: "registry.scality.com/test-result-management-dev/test-result-management:test_push_action"
-          # endtest
-          # tags: "registry.scality.com/test-result-management-dev/test-result-management:${{ github.event.inputs.tag }}"
+          tags: "registry.scality.com/test-result-management-dev/test-result-management:${{ github.event.inputs.tag }}"
 
-      #- name: Create Release
-      #  uses: softprops/action-gh-release@v1
-      #  env:
-      #    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      #  with:
-      #    tag_name: ${{ github.event.inputs.tag }}
-      #    release_name: Release ${{ github.event.inputs.tag }}
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.event.inputs.tag }}
+          release_name: Release ${{ github.event.inputs.tag }}
