@@ -1,3 +1,4 @@
+from ES_query.AST import Aggs, MasterNode, Terms, Variable
 import logging
 
 from typing import *
@@ -36,9 +37,6 @@ if __name__ == '__main__':
     parser = XMLParser.add_arguments(parser)
     parser = GeneratedTestParser.add_arguments(parser)
 
-    # test file argument
-    parser = UntestedGenerator.add_arguments(parser)
-
     args = parser.parse_args()
     # endregion
 
@@ -48,9 +46,6 @@ if __name__ == '__main__':
     # create ES manager
     es = ESManager.create_from_args(args)
 
-    # test file
-    test_file = UntestedGenerator.create_from_args(args)
-
     # parser
     generated_test_parser = GeneratedTestParser.create_from_args(args)
     xml_parser = XMLParser.create_from_args(args)
@@ -59,13 +54,16 @@ if __name__ == '__main__':
 
     # endregion
 
+    # test file
+    test_file = UntestedGenerator(es)
+
     index_name = 'artifact'
     es.create_or_update_index(index_name, {
         'properties': {
             field: value for field, value in settings['default_test_data'].items()
         }
     })
-    already_run_artifact = list(map(lambda bucket: bucket['key'] , es.aggregate(['artifact_name'])['aggregations']['artifact_name']['buckets']))
+    already_run_artifact = list(es.search(MasterNode(Aggs(Variable('artifact_name', Terms('artifact_name')))))['artifact_name'].keys())
 
     testcase_generators: Iterable[Iterable[TestCase]] = artifact_manager.get_all_tests(xml_parser, already_run_artifact)
     if os.environ.get('DEBUG'):

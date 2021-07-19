@@ -96,23 +96,3 @@ class ESManager(api_manager.base_manager.BaseManager, Instantiable):
                 "query": query
             }).json()
 
-    def _create_aggregation(self, aggregation_list: List[str]) -> AST:
-        """
-        create ES aggregation recursively to group tests together
-        params: aggregation_list: list of string that match the field in the elastic base
-        return : dictionnary matching elastic syntax to have imbricated aggregation 
-        ex : aggregation_list==['a', 'b']
-            return {
-                'a': {
-                    'terms': {'field': 'a', 'size': 100000} # the size is the number of result in the aggregation
-                    'aggs': {
-                        'b': {'terms': {'field': 'b', 'size': 100000}}
-                    }
-                }
-            }
-        """
-        field = aggregation_list[0]
-        if len(aggregation_list) > 1:
-            return Aggs(Variable(field, Terms(field), self._create_aggregation(aggregation_list[1:])))
-        else:
-            return Aggs(Variable(field, Terms(field)))
