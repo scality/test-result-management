@@ -20,15 +20,21 @@ class ESManager(api_manager.base_manager.BaseManager, Instantiable):
     instantiable_args = {
         'elastic_url':{
                 'help': 'elastic API url to push data into (ex: https://elasticsearch.devsca.com:9200/)'
+                },
+        '--elastic-username':{
+                'help': 'basic-auth username'
+                },
+        '--elastic-password':{
+                'help': 'basic-auth password',
                 }
-            }
-    def __init__(self, elastic_url: str):
+    }
+    def __init__(self, elastic_url: str, elastic_username: Optional[str]=None, elastic_password: Optional[str]=None):
         """
         initialise the ES python module with 1 url (one node), might need multiple node depending if performance require it
         params: url : one of the ES node
         """
-        self.es = elasticsearch.Elasticsearch([elastic_url])
-        super().__init__('ES', elastic_url)
+        self.es = elasticsearch.Elasticsearch([elastic_url], http_auth=(elastic_username, elastic_password))
+        super().__init__('ES', elastic_url, elastic_username, elastic_password)
 
     def create_or_update_index(self, index_name: str, mappings: dict) -> bool:
         """
