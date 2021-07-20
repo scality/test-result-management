@@ -1,7 +1,7 @@
 from ES_query.visitor.interprete_response import ReadData
 from ES_query.visitor.ast_to_query import CreateDictionnary
 from datetime import timedelta, datetime
-from ES_query.AST import Aggs, Bool, FilterTerms, MasterNode, Must, MustNot, Query, Range, Terms, Variable
+from ES_query.AST import Aggs, Bool, FilterTerms, MasterNode, Must, MustNot, Query, Range, Terms, Variable, AST
 import logging
 
 from typing import *
@@ -10,12 +10,12 @@ from api_manager.ES_manager import ESManager
 from parser.base_parser import BaseParser, TestCase
 log = logging.getLogger(__name__)
 TestTree = dict
-class UntestedGenerator(ESManager):
-    def __init__(self, elastic_url):
+class UntestedGenerator:
+    def __init__(self, elastic_manager: ESManager):
         """
         initialize UntestedGenerator
         """
-        super().__init__(elastic_url)
+        self.elastic_manager = elastic_manager
         # the aggregation to do in the tests_tree
         self.aggregation_list = ['repo', 'milestone', 'merge_step', 'section', 'operating_system', 'test_step','classname', 'testname']
 
@@ -39,6 +39,21 @@ class UntestedGenerator(ESManager):
         self.common_key = self.aggregation_list[:self.aggregation_list_common_data_length]
         self.key_to_generated_data = self.aggregation_list[self.aggregation_list_common_data_length:]
         
+    def _create_aggregation(self, aggregation_list: List[str]) -> AST:
+        """
+        create ES aggregation recursively to group tests together
+        params: aggregation_list: list of string that match the field in the elastic base
+        return : dictionnary matching elastic syntax to have imbricated aggregation 
+        ex : aggregation_list==['a', 'b']
+            return Aggs(Variable('a', Terms('a'),
+                        Aggs(Variable('b', Terms('b'))
+        """
+        field = aggregation_list[0]
+        if len(aggregation_list) > 1:
+            return Aggs(Variable(field, Terms(field), self._create_aggregation(aggregation_list[1:])))
+        else:
+            return Aggs(Variable(field, Terms(field)))
+
     def create_tests_tree(self, test) -> TestTree:
         aggregation_common_key = ['repo', 'milestone', 'merge_step']
         query = Bool(
@@ -56,7 +71,7 @@ class UntestedGenerator(ESManager):
             self._create_aggregation(self.aggregation_list),
             Query(query)
         )
-        response = self.search(ast)
+        response = self.elastic_manager.search(ast)
         response_without_variable_name = self.remove_variable_name(response)
         return response_without_variable_name
 

@@ -20,15 +20,21 @@ class ESManager(api_manager.base_manager.BaseManager, Instantiable):
     instantiable_args = {
         'elastic_url':{
                 'help': 'elastic API url to push data into (ex: https://elasticsearch.devsca.com:9200/)'
+                },
+        '--elastic-username':{
+                'help': 'basic-auth username'
+                },
+        '--elastic-password':{
+                'help': 'basic-auth password',
                 }
-            }
-    def __init__(self, elastic_url: str):
+    }
+    def __init__(self, elastic_url: str, elastic_username: Optional[str]=None, elastic_password: Optional[str]=None):
         """
         initialise the ES python module with 1 url (one node), might need multiple node depending if performance require it
         params: url : one of the ES node
         """
-        self.es = elasticsearch.Elasticsearch([elastic_url])
-        super().__init__('ES', elastic_url)
+        self.es = elasticsearch.Elasticsearch([elastic_url], http_auth=(elastic_username, elastic_password))
+        super().__init__('ES', elastic_url, elastic_username, elastic_password)
 
     def create_or_update_index(self, index_name: str, mappings: dict) -> bool:
         """
@@ -90,23 +96,3 @@ class ESManager(api_manager.base_manager.BaseManager, Instantiable):
                 "query": query
             }).json()
 
-    def _create_aggregation(self, aggregation_list: List[str]) -> AST:
-        """
-        create ES aggregation recursively to group tests together
-        params: aggregation_list: list of string that match the field in the elastic base
-        return : dictionnary matching elastic syntax to have imbricated aggregation 
-        ex : aggregation_list==['a', 'b']
-            return {
-                'a': {
-                    'terms': {'field': 'a', 'size': 100000} # the size is the number of result in the aggregation
-                    'aggs': {
-                        'b': {'terms': {'field': 'b', 'size': 100000}}
-                    }
-                }
-            }
-        """
-        field = aggregation_list[0]
-        if len(aggregation_list) > 1:
-            return Aggs(Variable(field, Terms(field), self._create_aggregation(aggregation_list[1:])))
-        else:
-            return Aggs(Variable(field, Terms(field)))

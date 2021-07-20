@@ -56,7 +56,7 @@
     "artifact_url_regexp": "(?P<data_url>.*(?P<artifact_name>github%3Ascality%3A(?P<repo>[a-z0-9-]+)%3Astaging-(?P<full_version_name>(?P<full_version>(?P<milestone>[0-9]{1,2}.[0-9]{1,2}).[0-9]{1,2}.[0-9]{1,2}).r(?P<commit_date>[0-9]{12}).(?P<commit_sha>[0-9a-f]+)).(?P<merge_step>[a-z0-9-]+).(?P<build_id>[0-9]+)/).*)",
     "buildbot_base_url": "https://eve.devsca.com/github/scality/ring/#/builders/2/builds/",
     "default_test_data": {
-            "data_url": {"type": "text"},
+            "data_url": {"type": "keyword"},
             "artifact_name": {"type": "keyword"},
             "repo": {"type": "keyword"},
             "full_version_name": {"type": "keyword"},
