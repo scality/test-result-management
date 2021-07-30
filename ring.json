@@ -48,6 +48,15 @@
         ".*permanent\\.([0-9a-z_-]+)\\..*"
 
     ],
+    "parsers": {
+        "_comment": [
+            "control how files are parsed",
+            "the key is a regexp that the file need to be matched to",
+            "the value is a path to a python BaseParser class"
+        ],
+        ".*report\\.xml":       "parser.xml_parser.XMLParser",
+        ".*xunit_report\\.xml": "parser.xml_parser.XMLParser"
+    },
     "file": {
         "black_list": ["tests/odr/last-odr"]
     },
