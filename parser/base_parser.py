@@ -33,6 +33,9 @@ class BaseParser(Instantiable):
         self.exceptions_list = []
         self.failed = False
         self.test_date = None
+
+    def parse_file(self, file_content, file_url):
+        pass
     
     def handle_exception(self, exception: Exception):
         """
