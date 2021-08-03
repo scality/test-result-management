@@ -120,8 +120,8 @@ class XMLParser(BaseParser):
         # check all status from the testcase
         for test_result in xml_node_testcase:
             testcase_data['status_testcase'] = test_result.tag
-            testcase_data['message'] = test_result.get('message', '')
-            testcase_data['text'] = test_result.get('text', '')
+            testcase_data['message'] = test_result.get('message', '')[1000:]
+            testcase_data['text'] = test_result.get('text', '')[1000:]
             return self.parse(testcase_data, data_url)
         # the test is a success if there is no testresult
         testcase_data['status_testcase'] = 'passed'
