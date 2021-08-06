@@ -47,7 +47,7 @@ class XMLParser(BaseParser):
         # create a dictionnary from method parse_thingtoparse to {'thingtoparse': self.parse_thingtoparse}
         return {name[6:]: getattr(self, name) for name in self_func}
 
-    def parse_xml_file(self, xml_node, data_url) -> Iterable[TestCase]:
+    def parse_file(self, xml_node: str, data_url: str) -> Iterable[TestCase]:
         if type(xml_node) != ET.Element:
             if len(xml_node) == 0:
                 log.warning(f"error reading read {data_url}, may be because the xml is empty")
@@ -61,7 +61,7 @@ class XMLParser(BaseParser):
         try:
             return self.tag_to_function[xml_node.tag](xml_node, data_url)
         except KeyError:
-            exc = XMLParser.XMLParserException(f'xml tag not recognised: {xml_node.tag} in file : {data_url}, possible tags : {self.tag_to_function.keys}')
+            exc = XMLParser.XMLParserException(f'xml tag not recognised: {xml_node.tag} in file : {data_url}, possible tags : {self.tag_to_function.keys()}')
             self.handle_exception(exc)
             return []
 

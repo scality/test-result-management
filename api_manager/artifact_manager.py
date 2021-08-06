@@ -1,15 +1,14 @@
 import re
 import datetime
 import logging
-from xml.etree.ElementTree import XML
 from utils.instantiable import Instantiable
 from bs4 import BeautifulSoup
 
 from typing import *
+from typing import Pattern
 
 from api_manager.base_manager import BaseManager
-from parser.base_parser import TestCase
-from parser.xml_parser import XMLParser
+from parser.base_parser import BaseParser, TestCase
 
 
 log = logging.getLogger(__name__)
@@ -56,7 +55,19 @@ class ArtifactManager(BaseManager, Instantiable):
         listing_response = self.get(artifact + '/', format='txt')
         return map(lambda _file: f'{artifact}/{_file}', listing_response.text.split('\n'))
 
-    def get_test_from_one_artifact(self, artifact: str, parser: XMLParser) -> Iterable[TestCase]:
+    def get_test_from_files(self, files: List[str], parser: BaseParser) -> Iterable[TestCase]:
+        processed_element = False
+        for file_ in files:
+            if any(blacklisted_file for blacklisted_file in parser.settings['file']['black_list'] if blacklisted_file in file_):
+                continue
+            log.info(f'getting : {self.url}/{file_}')
+            file_response = self.get(file_)
+            processed_element = True
+            yield from parser.parse_file(file_response.content, f'{self.url}/{file_}')
+        if not processed_element:
+            log.info('no testfile found in artifact')
+
+    def get_test_from_one_artifact(self, artifact: str, parsers: Dict[Pattern[str], BaseParser]) -> Iterable[TestCase]:
         """
         will retrieve all the report.xml in artifact and return all the testcase it can find in them
         params: 
@@ -66,31 +77,23 @@ class ArtifactManager(BaseManager, Instantiable):
         """
         log.info(f'getting artifact {artifact}')
         # list all files in artifact
-        artifact_files = self.list_artifact(artifact)
+        artifact_files = list(self.list_artifact(artifact))
         
         # final_status for the date
         try:
-            parser.test_date = datetime.datetime.strptime(self.get(f'{artifact}/.final_status').headers['Last-Modified'], '%a, %d %b %Y %H:%M:%S %Z') 
+            test_date = datetime.datetime.strptime(self.get(f'{artifact}/.final_status').headers['Last-Modified'], '%a, %d %b %Y %H:%M:%S %Z') 
         except:
-            parser.test_date = datetime.datetime.now()
+            test_date = datetime.datetime.now()
             log.warning('test date not found')
 
-        # select only xml file
-        regexp_xml = re.compile(r'.*/(xunit_){0,1}report\.xml')
-        xml_files = filter(lambda artifact_file: regexp_xml.match(artifact_file) is not None,
-                                artifact_files)
-        processed_element = False
-        for xml_file in xml_files:
-            if any(blacklisted_file for blacklisted_file in parser.settings['file']['black_list'] if blacklisted_file in xml_file):
-                continue
-            log.info(f'getting : {self.url}/{xml_file}')
-            xml_file_response = self.get(xml_file)
-            processed_element = True
-            yield from parser.parse_xml_file(xml_file_response.content, f'{self.url}/{xml_file}')
-        if not processed_element:
-            log.info('no testfile found in artifact')
+        # find wich parser to use for wich files
+        for regexp, parser in parsers.items():
+            files = filter(lambda artifact_file: regexp.match(artifact_file) is not None,
+                                    artifact_files)
+            parser.test_date = test_date
+            yield from self.get_test_from_files(files, parser)
 
-    def get_all_tests(self, parser: XMLParser, black_list: List[str]=[]) -> Iterable[Iterable[TestCase]]:
+    def get_all_tests(self, parsers: Dict[Pattern[str], BaseParser], black_list: List[str]=[]) -> Iterable[Iterable[TestCase]]:
         """
         params:
                 parser: a parser to format the testcase, might be XMLParser
@@ -117,9 +120,10 @@ class ArtifactManager(BaseManager, Instantiable):
         # endregion
 
         for artifact in artifacts_list:
-            yield self.get_test_from_one_artifact(artifact, parser)
+            yield self.get_test_from_one_artifact(artifact, parsers)
 
 if __name__ == '__main__':
+    from parser.xml_parser import XMLParser
     import utils.custom_argument_parser
     parser = utils.custom_argument_parser.CustomArgumentParser(description='retrieve datas from artifact and print them')
     parser = ArtifactManager.add_arguments(parser)

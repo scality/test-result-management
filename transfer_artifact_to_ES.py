@@ -1,5 +1,7 @@
 from ES_query.AST import Aggs, MasterNode, Terms, Variable
 import logging
+import re
+import importlib
 
 from typing import *
 
@@ -12,11 +14,21 @@ from parser.base_parser import TestCase
 logging.basicConfig(level=logging.WARNING)
 log = logging.getLogger(__name__)
 
-if __name__ == '__main__':
+
+def import_class(name: str) -> object:
+    """
+    import a class from another file, used to import custom parsers from settings files
+    ex: import_class('parser.xml_parser.XMLParser') -> XMLParser object
+    """
+    components = name.split('.')
+    mod = importlib.import_module('.'.join(components[:-1]))
+    return getattr(mod, components[-1])
+
+def main():
     from utils.custom_argument_parser import CustomArgumentParser
     from api_manager.ES_manager import ESManager
     from api_manager.artifact_manager import ArtifactManager
-    from parser.xml_parser import XMLParser
+    from parser.base_parser import BaseParser
     from parser.generated_test_parser import GeneratedTestParser
     from utils.untested_generator import UntestedGenerator
     from version import __version__
@@ -25,6 +37,11 @@ if __name__ == '__main__':
     # region Parser
     parser = CustomArgumentParser(description='retrieve datas from artifact and process them')
     
+    # custom argument
+    parser.add_argument('--dry-run',
+        help="When this option is set, no test will be send to elastic, only the retrievall of the test will be done",
+        action='store_true', default=False
+    )
     parser.add_argument('-v', '--version', action='version', help='display the current version in ./version.py', version=f'%(prog)s {__version__}')
 
     # Artifact Argument
@@ -34,8 +51,8 @@ if __name__ == '__main__':
     parser = ESManager.add_arguments(parser)
     
     # parser argument
-    parser = XMLParser.add_arguments(parser)
-    parser = GeneratedTestParser.add_arguments(parser)
+    parser = BaseParser.add_arguments(parser)
+
 
     args = parser.parse_args()
     # endregion
@@ -43,29 +60,45 @@ if __name__ == '__main__':
     # region initialisation
     # create the ArtifactManager
     artifact_manager = ArtifactManager.create_from_args(args)
+
     # create ES manager
     es = ESManager.create_from_args(args)
 
-    # parser
+    # generator parser
     generated_test_parser = GeneratedTestParser.create_from_args(args)
-    xml_parser = XMLParser.create_from_args(args)
 
-    settings = xml_parser.settings
+    settings = generated_test_parser.settings
+
+    # instantiate all the requested parser rom settings file :
+    parsers = {}
+    for regexp, class_path in settings['parsers'].items():
+        if regexp == '_comment':
+            continue
+        parsers[re.compile(regexp)] = import_class(class_path).create_from_args(args)
+
+    # untested generator
+    test_file = UntestedGenerator(es)
 
     # endregion
 
-    # test file
-    test_file = UntestedGenerator(es)
-
+    # create or update 'artifact' index into ES
     index_name = 'artifact'
     es.create_or_update_index(index_name, {
         'properties': {
             field: value for field, value in settings['default_test_data'].items()
         }
     })
-    already_run_artifact = list(es.search(MasterNode(Aggs(Variable('artifact_name', Terms('artifact_name')))))['artifact_name'].keys())
 
-    testcase_generators: Iterable[Iterable[TestCase]] = artifact_manager.get_all_tests(xml_parser, already_run_artifact)
+    if args.dry_run:
+        # if we do a dry run, nothing is pushed to elastic so we can re-do already run artifact, it's a debug feature
+        already_run_artifact = []
+    else:
+        # search all artifact already run to elastic
+        already_run_artifact = list(es.search(MasterNode(
+            Aggs(Variable('artifact_name', Terms('artifact_name')))
+        ))['artifact_name'].keys())
+
+    testcase_generators: Iterable[Iterable[TestCase]] = artifact_manager.get_all_tests(parsers, already_run_artifact)
     if os.environ.get('DEBUG'):
         testcase_generators_list: List[List[TestCase]] = [
             [testcase for testcase in testcase_generator]
@@ -75,6 +108,7 @@ if __name__ == '__main__':
         testcase_generators = testcase_generators_list
         log.info(f'tests automatically generated : {len(testcase_list)}')
         input('press any key to continue')
+
     testcase_generators_with_missing_test: Iterable[Iterable[TestCase]] = (generator for generator in (
         test_file.decorate_with_missing_testcase(testcase_generator, generated_test_parser)
         for testcase_generator in testcase_generators
@@ -88,6 +122,17 @@ if __name__ == '__main__':
         testcase_generator = (testcase for testcase in testcase_list)
         log.info(f'tests automatically generated : {len(testcase_list)}')
         input('press any key to continue')
-    for success, info in es.bulk_upload(index_name, testcase_generator):
-        if not success:
-            log.warning('failed to store: ', info)
+
+    if args.dry_run:
+        from pprint import pprint
+        testcase_found = list(testcase_generator)
+        pprint(testcase_found[:10])
+        pprint(len(testcase_found))
+    else:
+        for success, info in es.bulk_upload(index_name, testcase_generator):
+            if not success:
+                log.warning('failed to store: ', info)
+
+
+if __name__ == '__main__':
+    main()

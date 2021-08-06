@@ -6,47 +6,7 @@
         "the ideal solution would be to have those informations in the xml file of the test"
     ],
     "sections": [
-        "supervisor",
-        "GUI",
-        "packaging",
-        "bizstorenode",
-        "scaldisk",
-        "hyperdrive",
-        "installer",
-        "svsd",
-        "unit",
-        "ganesha",
-        "interop_fs",
-        "geos",
-        "dlm",
-        "e2e",
-        "geosync.fullsync",
-        "rs2",
-        "cifs",
-        "dewpoint",
-        "kerberos",
-        "zimbra",
-        "robot_framework",
-        "sproxyd",
-        "geosync.dentsync",
-        "biziod",
-        "undelete",
-        "fuse",
-        "sprov",
-        "costs",
-        "install",
-        "volprot",
-        "fs-common",
-        "ha1",
-        "ucheck",
-        "versioning",
-        "ctdb",
-        "install",
-        "conf",
-        ".*modules\\.([0-9a-z_-]+)\\..*",
-        ".*functional\\.([0-9a-z_-]+)\\..*",
-        ".*permanent\\.([0-9a-z_-]+)\\..*"
-
+        "junit"
     ],
     "parsers": {
         "_comment": [
@@ -54,15 +14,14 @@
             "the key is a regexp that the file need to be matched to",
             "the value is a path to a python BaseParser class"
         ],
-        ".*report\\.xml":       "parser.xml_parser.XMLParser",
-        ".*xunit_report\\.xml": "parser.xml_parser.XMLParser"
+        ".*junit-report-[0-9a-f]+\\.xml$":       "parser.xml_parser.XMLParser"
     },
     "file": {
-        "black_list": ["tests/odr/last-odr"]
+        "black_list": []
     },
-    "operating_systems": ["centos6", "centos7", "centos8", "xenial", "trusty", "redhat7"],
-    "test_steps": [".*step: ([0-9a-z_]+).*", ".*step_([0-9a-z_]+).*", ".*test\\.(.+)"],
-    "artifact_url_regexp": "(?P<data_url>.*(?P<artifact_name>github%3Ascality%3A(?P<repo>[a-z0-9-]+)%3Astaging-(?P<full_version_name>(?P<full_version>(?P<milestone>[0-9]{1,2}.[0-9]{1,2}).[0-9]{1,2}.[0-9]{1,2}).r(?P<commit_date>[0-9]{12}).(?P<commit_sha>[0-9a-f]+)).(?P<merge_step>[a-z0-9-]+).(?P<build_id>[0-9]+)/).*)",
+    "operating_systems": [],
+    "test_steps": [],
+    "artifact_url_regexp": "(?P<data_url>.*(?P<artifact_name>github%3Ascality%3A(?P<repo>[a-z0-9-]+)%3Astaging-(?P<full_version_name>(?P<full_version>(?P<milestone>[0-9]{1,2}.[0-9]{1,2}).[0-9]{1,2}).r(?P<commit_date>[0-9]{12}).(?P<commit_sha>[0-9a-f]+)).(?P<merge_step>[a-z0-9-]+).(?P<build_id>[0-9]+)/).*)",
     "buildbot_base_url": "https://eve.devsca.com/github/scality/ring/#/builders/2/builds/",
     "default_test_data": {
             "data_url": {"type": "keyword"},
