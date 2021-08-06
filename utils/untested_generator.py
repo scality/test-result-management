@@ -1,13 +1,12 @@
-from ES_query.visitor.interprete_response import ReadData
-from ES_query.visitor.ast_to_query import CreateDictionnary
 from datetime import timedelta, datetime
+from parser.generated_test_parser import GeneratedTestParser
 from ES_query.AST import Aggs, Bool, FilterTerms, MasterNode, Must, MustNot, Query, Range, Terms, Variable, AST
 import logging
 
 from typing import *
 
 from api_manager.ES_manager import ESManager
-from parser.base_parser import BaseParser, TestCase
+from parser.base_parser import TestCase, TestCaseCandidate
 log = logging.getLogger(__name__)
 TestTree = dict
 class UntestedGenerator:
@@ -16,6 +15,7 @@ class UntestedGenerator:
         initialize UntestedGenerator
         """
         self.elastic_manager = elastic_manager
+
         # the aggregation to do in the tests_tree
         self.aggregation_list = ['repo', 'milestone', 'merge_step', 'section', 'operating_system', 'test_step','classname', 'testname']
 
@@ -55,15 +55,39 @@ class UntestedGenerator:
             return Aggs(Variable(field, Terms(field)))
 
     def create_tests_tree(self, test) -> TestTree:
+        """
+        retrieve from elasticSearch the tests with the same repo, milestone and merge_step as the given test
+        return a testtree like that :
+        test == {'repo': 'ring', 'milestone': '8.5', 'merge_step': 'post-merge', ....}
+        self.aggregation_list == repo, milestone, merge-step, section....
+        return {
+            'ring': {
+                '8.5': {
+                    'post-merge': {
+                        'section1': {
+                            ...
+                        },
+                        'section2': {
+                            ...
+                        }
+                        'section3': {
+                            ....
+                        }
+                    }
+                }
+            }
+        }
+        with an aggregation of tests following the aggregation list
+        """
         aggregation_common_key = ['repo', 'milestone', 'merge_step']
         query = Bool(
-            Must(
+            Must( # have the same repo, milestone, merge_step and be less than 15 days old
                 Range("test_date", datetime.now() - timedelta(days=15), datetime.now()),
                 *[
                     FilterTerms(key, test[key]) for key in aggregation_common_key if key in test
                 ]
             ),
-            MustNot(
+            MustNot( # be a untested test
                 FilterTerms("status_value", -1)
             )
         )
@@ -76,6 +100,24 @@ class UntestedGenerator:
         return response_without_variable_name
 
     def remove_variable_name(self, response):
+        """
+        remove the name of the variable from the response (take 1 key every 2 dictionnary)
+        input == {'varname1': {
+            'ring':{
+                'varname2': {
+                    '8.5':{...},
+                    '7.4':{...},
+                },
+            'cloudserver': {...}
+        }}
+        return {
+            'ring': {
+                '8.5':{...},
+                '7.4':{...}
+            },
+            'cloudserver': {...}
+        }
+        """
         if response == {}:
             return {}
         ans = {}
@@ -88,6 +130,7 @@ class UntestedGenerator:
     def remove_test(self, test: TestCase, tests_tree: TestTree):
         """
         remove the test from test_tree
+        since it's run, we don't have to upload it as an untested test
         """
         last_aggregation = tests_tree
         for aggregate in self.aggregation_list:
@@ -100,7 +143,7 @@ class UntestedGenerator:
         else:
             del last_aggregation[test[aggregate]]
 
-    def recreate_test(self, selected_tests_tree: TestTree, test_data: dict, missing_key: List[str]) -> Iterable[Tuple[dict, str]]:
+    def recreate_test(self, selected_tests_tree: TestTree, test_data: dict, missing_key: List[str]) -> Iterable[TestCaseCandidate]:
         """
         yield a dict to be parsed into a TestCase with the url of the data
         recursively find leaf in TestTree for missing key and yield each of them with test_data
@@ -114,16 +157,27 @@ class UntestedGenerator:
             yield from self.recreate_test(selected_tests_tree[test], test_data, missing_key[1:])
 
     def find_tests_tree_for_tuple(self, tests_tree, tuple):
+        """
+        find the sub test tree for a give tuple
+        tests_tree == {
+            'ring': {'8.5': {'section1': {...}, 'section2': {...}}, '7.4': {...}},
+            'cloudserver': {...}
+        }
+        tuple == ('ring', '8.5')
+        return {
+            'section1': {...},
+            'section2': {...}
+        }
+        """
         current_tests_tree: dict = tests_tree
         # follow every paths in set for common keys in test_tree
         for key in tuple:
             current_tests_tree = current_tests_tree[key]
         return current_tests_tree
 
-    def missing_test(self, given_data: Set[Tuple[str,...]], tests_tree: TestTree, constant_data):
+    def missing_test(self, given_data: Set[Tuple[str,...]], tests_tree: TestTree, constant_data: dict) -> Iterable[TestCaseCandidate]:
         """
-        each tuple in gicen_data set translate into a 'path' in the tests_tree
-        all leaf of the tests tree, following the path in sets, are considered valid test to be sent
+        find all missing test by searching through the teststree the given data path
         """
         for tuple in given_data:
             # save common key
@@ -139,25 +193,35 @@ class UntestedGenerator:
             except KeyError:
                 continue
 
-    def decorate_with_missing_testcase(self, generator: Iterable[TestCase], parser: BaseParser) -> Iterable[TestCase]:
+    def decorate_with_missing_testcase(self, generator: Iterable[TestCase], parser: GeneratedTestParser) -> Iterable[TestCase]:
+        """
+        take an iterable and return an iterable with the test hat should've run but havn't
+        """
         current_generator_tests_tree: TestTree = None
         given_data: Set[Tuple[str,...]] = set()
         constant_data = {}
         first_test = True
         for testcase in generator:
             if first_test:
+                # generate the teststree only once
                 current_generator_tests_tree = self.create_tests_tree(testcase)
                 first_test = False
-
+            # remove the test from the teststree
             self.remove_test(testcase, current_generator_tests_tree)
             
             yield testcase
+
+            # add the test to given data, it's the path that will be followed by missing_test to recreate them
             given_data.add(tuple(testcase[key] for key in self.common_key))
+
+            # populate constant_data with the constant key of the tests
             constant_data = {key: testcase[key] for key in self.constant_keys}
 
         try:
+            # recreate the missing test
             missing_tests = list(self.missing_test(given_data, current_generator_tests_tree, constant_data))
         except Exception as e:
+            # if their is an exception we display it but don't break since it's the untested generator and we must sent all tests really run
             log.error(e)
             raise
         for missing_test, data_url in missing_tests:
@@ -166,7 +230,7 @@ class UntestedGenerator:
                 continue
             yield generated_testcase
 
-    def decorate_multiple_generators(self, generators: Iterable[Iterable[TestCase]], parser) -> Iterable[TestCase]:
+    def decorate_multiple_generators(self, generators: Iterable[Iterable[TestCase]], parser: GeneratedTestParser) -> Iterable[TestCase]:
         for generator in generators:
             yield from self.decorate_with_missing_testcase(generator, parser)
 
@@ -174,7 +238,6 @@ if __name__ == '__main__':
     import datetime
     import custom_argument_parser
     from pprint import pprint
-    import json
     from parser.generated_test_parser import GeneratedTestParser
 
     parser = custom_argument_parser.CustomArgumentParser()

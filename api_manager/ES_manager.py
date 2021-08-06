@@ -64,15 +64,16 @@ class ESManager(api_manager.base_manager.BaseManager, Instantiable):
         return streaming_bulk(client=self.es, index=index_name, actions=generator)
     
     def search(self, query: AST):
-        response = self.get('_search', CreateDictionnary().parse(query)).json()
-        return ReadData().parse(query, response)
-    
-    def search(self, query):
+        """
+        perform a search query with the given AST from ES Query
+        """
+
+        # convert AST to a query dict
         query_dict = CreateDictionnary().parse(query)
+        # perform the request
         response = self.get('_search', data=query_dict).json()
-        return ReadData().parse(query,
-                                response
-                                )
+        # read the response and format it nicely
+        return ReadData().parse(query, response)
     
     def aggregate(self, aggregations: list, query: Optional[dict]=None) -> dict:
         """

@@ -15,7 +15,7 @@ TestCaseCandidate = dict # represent a TestCase that is in construction
 class BaseParser(Instantiable):
     instantiable_args = {
         'setting_file': {'help': 'the setting file to use when parsing the xml, contain section name, os....'},
-        '--soft-fail': {'action': 'store_true', 'default': False}
+        '--soft-fail': {'help': 'indicate wether or not the parsing will crash or just display errors message', 'action': 'store_true', 'default': False}
     }
 
     class BaseParserException(Exception):
@@ -35,6 +35,9 @@ class BaseParser(Instantiable):
         self.test_date = None
 
     def parse_file(self, file_content, file_url):
+        """
+        Virtual method for parsing a given file
+        """
         pass
     
     def handle_exception(self, exception: Exception):

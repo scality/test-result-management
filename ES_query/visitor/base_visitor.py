@@ -9,9 +9,9 @@ class BaseVisitor:
         use code reflection to retrieve what xml tags that can be parsed
         every method of the class that begin with parse_ will be retrieved and put in the return dictionnary
         return exemple : {
-            'testsuite': self.parse_testsuite,
-            'testsuites': self.parse_testsuites,
-            'testcase': self.parse_testcase,
+            'variable': self.parse_variable,
+            'terms': self.parse_terms,
+            'filter': self.parse_filter,
         }
         allow to insert new tag to be parsed without modifing the previous method
         """
@@ -23,6 +23,9 @@ class BaseVisitor:
         return {name[6:]: getattr(self, name) for name in self_func}
 
     def parse(self, ast, data=None):
+        """
+        function to use this visitor to an AST, may or may not need additionnal data
+        """
         try:
             return self.tag_to_function[type(ast).__name__.lower()](ast, data)
         except KeyError:

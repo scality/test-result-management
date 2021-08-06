@@ -16,7 +16,7 @@ log = logging.getLogger(__name__)
 class JunitParser(BaseParser):
     """
     Used in artifactManager to parse the data and yield dictionnary
-    This particular parser is created for the ring, may work for other repo.
+    This particular parser is created for Junit files
 
     use code reflection to retrieve what xml tags can be parsed
     every method that starts with parse_ while be added to the tag that can be parsed
@@ -48,6 +48,9 @@ class JunitParser(BaseParser):
         return {name[6:]: getattr(self, name) for name in self_func}
 
     def parse_file(self, xml_node: str, data_url: str) -> Iterable[TestCase]:
+        """
+        parse a xml file content
+        """
         if type(xml_node) != ET.Element:
             if len(xml_node) == 0:
                 log.warning(f"error reading read {data_url}, may be because the xml is empty")
@@ -139,16 +142,3 @@ class JunitParser(BaseParser):
     def parse_testsuites(self, xml_node_testsuites, data_url) -> Iterable[TestCase]:
         for testsuite in xml_node_testsuites:
             yield from self.parse_testsuite(testsuite, data_url)
-
-if __name__ == '__main__':
-    # this contraption allow to retrieve a sample dictionnary return
-    import json
-    from utils.custom_argument_parser import CustomArgumentParser
-
-    parser = CustomArgumentParser()
-    parser = JunitParser.add_arguments(parser)
-    args = parser.parse_args()
-    logging.basicConfig(level=logging.DEBUG)
-    log = logging.getLogger(__name__)
-    for data in JunitParser(**JunitParser.create_from_args(args)).parse_xml_file('<testcase></testcase>', ''):
-        print(data)

@@ -3,6 +3,10 @@ from ES_query.visitor.base_visitor import BaseVisitor
 
 
 class CreateDictionnary(BaseVisitor):
+    """
+    TRansform an AST into an ElasticSearch Query (json formatted)
+    to be sent to ES via an http request
+    """
     def parse_variable(self, ast, data) -> dict:
         values = {}
         for value in ast.values:

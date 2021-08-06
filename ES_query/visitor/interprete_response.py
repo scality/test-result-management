@@ -3,6 +3,10 @@ from ES_query.AST import Variable
 
 
 class ReadData(BaseVisitor):
+    """
+    Read an ES response with the AST and try to interprete it and format it in a nice way
+    will removed 'useless' information and only try to reflect the AST that was given
+    """
     def __init__(self) -> None:
         super().__init__()
         self.is_first_node = True

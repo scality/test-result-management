@@ -56,6 +56,10 @@ class ArtifactManager(BaseManager, Instantiable):
         return map(lambda _file: f'{artifact}/{_file}', listing_response.text.split('\n'))
 
     def get_test_from_files(self, files: List[str], parser: BaseParser) -> Iterable[TestCase]:
+        """
+        yield all parsed test from the files list
+        parsed with the given parser
+        """
         processed_element = False
         for file_ in files:
             if any(blacklisted_file for blacklisted_file in parser.settings['file']['black_list'] if blacklisted_file in file_):
@@ -69,10 +73,10 @@ class ArtifactManager(BaseManager, Instantiable):
 
     def get_test_from_one_artifact(self, artifact: str, parsers: Dict[Pattern[str], BaseParser]) -> Iterable[TestCase]:
         """
-        will retrieve all the report.xml in artifact and return all the testcase it can find in them
+        will retrieve all the files in artifact that match the regexp in setting and return all the testcase it can find in them
         params: 
                 artifact : The artifact where the tests are stored
-                parser : The parser to be used (for ring it's xml_parser.XMLParser but can create new parser if tests are not correctly retrieve)
+                parsers : The parsers dictionnary, conataining a regex key to be matched against the files and wich parser to use
         return: generator of testcase
         """
         log.info(f'getting artifact {artifact}')
@@ -96,7 +100,7 @@ class ArtifactManager(BaseManager, Instantiable):
     def get_all_tests(self, parsers: Dict[Pattern[str], BaseParser], black_list: List[str]=[]) -> Iterable[Iterable[TestCase]]:
         """
         params:
-                parser: a parser to format the testcase, might be XMLParser
+                parsers : The parsers dictionnary, conataining a regex key to be matched against the files and wich parser to use
                 black_list: list of fullversionname to remove from the parsing (already processed)
         return : a generator of generator of testcase
             the first iterator is for each artifact

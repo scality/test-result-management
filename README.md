@@ -82,4 +82,4 @@ What might go wrong :
 - have multiple elasticsearch index
 - the default_test_data must stay the same accross all indexes, so it should not be in the config file, or at least not in this config file per repo since it should be the same accross all repos (or have different indexes per repo)
 - maybe be a little more flexible about what datas are sent to elastic (instead of undefined when there is no OS, maybe just accept a tests without OS ? for example)
-
+- TESTING
