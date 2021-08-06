@@ -13,7 +13,7 @@ from .base_parser import BaseParser, TestCase, TestCaseCandidate
 log = logging.getLogger(__name__)
 
 
-class XMLParser(BaseParser):
+class JunitParser(BaseParser):
     """
     Used in artifactManager to parse the data and yield dictionnary
     This particular parser is created for the ring, may work for other repo.
@@ -21,9 +21,9 @@ class XMLParser(BaseParser):
     use code reflection to retrieve what xml tags can be parsed
     every method that starts with parse_ while be added to the tag that can be parsed
     """
-    class XMLParserException(Exception):
+    class JunitParserException(Exception):
         def __str__(self):
-            return '[XMLParser] ' + super().__str__()
+            return '[JunitParser] ' + super().__str__()
 
     def __init__(self, setting_file, soft_fail=False):
         super().__init__(setting_file, soft_fail)
@@ -55,13 +55,13 @@ class XMLParser(BaseParser):
             try:
                 xml_node = ET.fromstring(xml_node)
             except ET.ParseError:
-                exc = XMLParser.XMLParserException(f"error reading read {data_url}")
+                exc = JunitParser.JunitParserException(f"error reading read {data_url}")
                 self.handle_exception(exc)
                 return []
         try:
             return self.tag_to_function[xml_node.tag](xml_node, data_url)
         except KeyError:
-            exc = XMLParser.XMLParserException(f'xml tag not recognised: {xml_node.tag} in file : {data_url}, possible tags : {self.tag_to_function.keys()}')
+            exc = JunitParser.JunitParserException(f'xml tag not recognised: {xml_node.tag} in file : {data_url}, possible tags : {self.tag_to_function.keys()}')
             self.handle_exception(exc)
             return []
 
@@ -74,7 +74,7 @@ class XMLParser(BaseParser):
     def get_section(self, melting_pot):
         section = self.cross_search(melting_pot, self.settings['sections'])
         if section is None:
-            exc = XMLParser.XMLParserException(f"can't find section for test '{melting_pot}' in {self.settings['sections']}")
+            exc = JunitParser.JunitParserException(f"can't find section for test '{melting_pot}' in {self.settings['sections']}")
             self.handle_exception(exc)
             return ''
         return section
@@ -90,7 +90,7 @@ class XMLParser(BaseParser):
         # region data from url, not supposed to fail, should be stored elsewhere tho like in xml node
         artifact_url_match = re.match(self.settings['artifact_url_regexp'], data_url)
         if artifact_url_match is None:
-            exc = XMLParser.XMLParserException(f"Failed to parse artifact url, {self.settings['artifact_url_regexp']} doesn't match {data_url}")
+            exc = JunitParser.JunitParserException(f"Failed to parse artifact url, {self.settings['artifact_url_regexp']} doesn't match {data_url}")
             self.handle_exception(exc)
             testcase_data = {}
         else:
@@ -146,9 +146,9 @@ if __name__ == '__main__':
     from utils.custom_argument_parser import CustomArgumentParser
 
     parser = CustomArgumentParser()
-    parser = XMLParser.add_arguments(parser)
+    parser = JunitParser.add_arguments(parser)
     args = parser.parse_args()
     logging.basicConfig(level=logging.DEBUG)
     log = logging.getLogger(__name__)
-    for data in XMLParser(**XMLParser.create_from_args(args)).parse_xml_file('<testcase></testcase>', ''):
+    for data in JunitParser(**JunitParser.create_from_args(args)).parse_xml_file('<testcase></testcase>', ''):
         print(data)

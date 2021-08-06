@@ -123,15 +123,15 @@ class ArtifactManager(BaseManager, Instantiable):
             yield self.get_test_from_one_artifact(artifact, parsers)
 
 if __name__ == '__main__':
-    from parser.xml_parser import XMLParser
+    from parser.xml_parser import JunitParser
     import utils.custom_argument_parser
     parser = utils.custom_argument_parser.CustomArgumentParser(description='retrieve datas from artifact and print them')
     parser = ArtifactManager.add_arguments(parser)
-    parser = XMLParser.add_arguments(parser)
+    parser = JunitParser.add_arguments(parser)
     args = parser.parse_args()
 
     # create the ArtifactManager
     artifact_manager = ArtifactManager(**ArtifactManager.create_from_args(args))
-    xml_parser= XMLParser(**XMLParser.create_from_args(args))
+    xml_parser= JunitParser(**JunitParser.create_from_args(args))
     for item in artifact_manager.get_all_tests(xml_parser):
         print(item)

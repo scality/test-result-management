@@ -14,7 +14,7 @@
             "the key is a regexp that the file need to be matched to",
             "the value is a path to a python BaseParser class"
         ],
-        ".*junit-report-[0-9a-f]+\\.xml$":       "parser.xml_parser.XMLParser"
+        ".*junit-report-[0-9a-f]+\\.xml$":       "parser.xml_parser.JunitParser"
     },
     "file": {
         "black_list": []
