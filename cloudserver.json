@@ -1,0 +1,61 @@
+{
+    "_comment": [
+        "this is the json file used for transfering test",
+        "everything placed here is because i can't retrieve it from the tests",
+        "and have to look in the testname or url or other and have to guess",
+        "the ideal solution would be to have those informations in the xml file of the test"
+    ],
+    "sections": [
+        "junit"
+    ],
+    "parsers": {
+        "_comment": [
+            "control how files are parsed",
+            "the key is a regexp that the file need to be matched to",
+            "the value is a path to a python BaseParser class"
+        ],
+        ".*junit-report-[0-9a-f]+\\.xml$":       "parser.xml_parser.XMLParser"
+    },
+    "file": {
+        "black_list": []
+    },
+    "operating_systems": [],
+    "test_steps": [],
+    "artifact_url_regexp": "(?P<data_url>.*(?P<artifact_name>github%3Ascality%3A(?P<repo>[a-z0-9-]+)%3Astaging-(?P<full_version_name>(?P<full_version>(?P<milestone>[0-9]{1,2}.[0-9]{1,2}).[0-9]{1,2}).r(?P<commit_date>[0-9]{12}).(?P<commit_sha>[0-9a-f]+)).(?P<merge_step>[a-z0-9-]+).(?P<build_id>[0-9]+)/).*)",
+    "buildbot_base_url": "https://eve.devsca.com/github/scality/ring/#/builders/2/builds/",
+    "default_test_data": {
+            "data_url": {"type": "keyword"},
+            "artifact_name": {"type": "keyword"},
+            "repo": {"type": "keyword"},
+            "full_version_name": {"type": "keyword"},
+            "full_version": {"type": "keyword"},
+            "milestone": {"type": "keyword"},
+            "commit_date": {"type": "date"},
+            "commit_sha": {"type": "keyword"},
+            "merge_step": {"type": "keyword"},
+            "build_id": {"type": "keyword"},
+            "buildbot_url": {"type": "keyword"},
+            "test_date": {"type": "date"},
+            "upload_date": {"type": "date"},
+            "classname": {"type": "keyword"},
+            "testname": {"type": "keyword"},
+            "duration": {"type": "float"},
+            "section": {"type": "keyword"},
+            "operating_system": {"type": "keyword"},
+            "test_step": {"type": "keyword"},
+            "status_testcase": {"type": "keyword"},
+            "status_value": {"type": "integer"},
+            "message": {"type": "text"},
+            "text": {"type": "text"}
+    },
+    "status_to_value": {
+        "_comment": "Allow converting of a status to another one, also need a number to be able to plot it",
+        "passed":       ["passed", 5],
+        "system-out":   ["passed", 5],
+        "system-err":   ["passed", 5],
+        "skipped":      ["skipped", 4],
+        "error":        ["failure", 0],
+        "failure":      ["failure", 0],
+        "untested":     ["untested", -1]
+    }
+}
